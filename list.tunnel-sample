@@ -1,0 +1,2 @@
+ssh -R 9191:192.168.1.5:9191 -N -f root@bunker.example.com -p22000
+ssh -R 8443:192.168.1.5:443 -N -f root@bunker.example -p22000
