@@ -1,6 +1,12 @@
 # haruka-tunnel
 Act as proxy for home server without public ip
 
+## Requirement
+* VPS or Cloud Server with ipv4 public ip (root access required)
+
+## Compatibility
+* Only tested on debian/ubuntu
+
 ## setup
 ### Server
 enable gateway port at sshd_config
@@ -9,14 +15,14 @@ GatewayPorts yes
 ```
 restart sshd
 
-### Private server that require public
+### Private server that need public access
 #### setup
 ```bash
 git clone https://github.com/faizal2007/haruka-tunnel.git
 cd haruka-tunnel
 cp list.tunnel-sample list.tunnel
 ```
-###  running script
+###  command guide
 setting port, client ip and ssh address in list.tunnel file
 
 > run tunnel
