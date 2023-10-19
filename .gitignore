@@ -1,1 +1,6 @@
 /list.tunnel
+/venv/*
+command
+*.backup
+.env
+*.pid
