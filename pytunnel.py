@@ -61,6 +61,8 @@ def main():
     ssh_host = os.getenv("SSH_HOST")
     ssh_port = os.getenv("SSH_PORT")
     ssh_user = os.getenv("SSH_USER")
+    debug = os.getenv("DEBUG")
+
     # ssh_pass = ''
     private_key_path = os.getenv("PRIVATE_KEY_PATH")
 
@@ -73,7 +75,7 @@ def main():
 
     args = parser.parse_args()
     remote_bind_port, forward_port = args.ports.split(":")
-    #forward_host, forward_port = "localhost", int(forward_port)
+    forward_host, forward_port = forward_host, int(forward_port)
 
 
     client = paramiko.SSHClient()
@@ -82,6 +84,8 @@ def main():
     client.set_missing_host_key_policy(paramiko.WarningPolicy())
 
     try:
+
+        if debug: paramiko.util.log_to_file("logs/paramiko.log")
         client.connect(
             ssh_host,
             ssh_port,
