@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import subprocess, os
+import subprocess, os, sys
 
 def is_process_running(pid):
     # Check if a process with the specified PID is running
@@ -23,10 +23,14 @@ def start_tunnel(tunnel_command):
     print(f"Tunnel started. {sanitized_tunnel_name}")
 
 def main():
+    python_bin = sys.executable
+    current_path = os.getcwd()
+    script_name = "pytunnel.py"
+    full_path_script = os.path.join(current_path, script_name)
     # Define tunnel configurations and PID file names
     tunnels = [
-        {"command": ["python", "pytunnel.py", "8443:443"]},
-        {"command": ["python", "pytunnel.py", "22023:22"]}
+        {"command": [python_bin, full_path_script, "8443:443"]},
+        {"command": [python_bin, full_path_script, "22023:22"]}
     ]
 
     for tunnel in tunnels:

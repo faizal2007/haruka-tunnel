@@ -2,43 +2,17 @@
 ##  sshd_config at server required
 ##  GatewayPorts yes
 
-kill_tunnel() {
-    while IFS= read -r line
-    do
-        if [[ -z $(ps -ef | grep "$line"| grep -v grep) ]]
-        then
-            echo -e "\e[46m No tunnel to kill"
-        else
-            echo -e "\e[41m Kill $line"
-            ps -ef | grep "$line"| grep -v grep| awk '{print $2}'| xargs kill -9
-        fi
-    done < $1
-}
+HARUKA_HOME="/home/freakie/scripts/haruka-tunnel"
+cd $HARUKA_HOME
+PYTHON_BIN="venv/bin/python"
 
-activate_tunnel() {
-    while IFS= read -r line
-    do
-        if [[ -z $(ps -ef | grep "$line"| grep -v grep) ]]
-        then
-            echo -e "\e[44m Activate $line"
-            $line
-        else
-            echo -e "\e[42m Active $line"
-        fi
-    done < "$1"
-}
-
-BASE=$(dirname $0)
-LIST_TUNNEL="$BASE/list.tunnel"
-
-echo -e "\e[49m \e[39m"
-#activate_tunnel $LIST_TUNNEL
-if [[ $1 == "kill" ]]
-then
-    kill_tunnel $LIST_TUNNEL
+if [ "$1" == "start" ]; then
+    # Start the service
+    echo "$HARUKA_HOME/$PYTHON_BIN $HARUKA_HOME/tunneld.py"
+    $HARUKA_HOME/$PYTHON_BIN $HARUKA_HOME/tunneld.py
+elif [ "$1" == "stop" ]; then
+#    ps -ef | grep tunnel | grep -v /bin/bash | grep -v grep | awk '{print $2}' | xargs kill -9
+    ps -ef | grep "tunnel" | grep -v "/bin/bash" | grep -v "grep" | awk '{print "Killing process", $2, "(", $10, ")"; system("kill -9 " $2)}'
 else
-    activate_tunnel $LIST_TUNNEL
-fi 
-
-echo -e "\e[49m \e[39m"
-
+    echo "Usage: $0 [start|stop]"
+fi
