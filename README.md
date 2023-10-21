@@ -28,6 +28,7 @@ cp env.example .env
 ## ssh password-less generate
 ssh-keygen -t rsa
 ```
+> copy content ~/.ssh/id_rsa.pub to remote@server.com:~/.ssh/authorized_keys
 ###  command guide
 setting port, client ip and ssh address in list.tunnel file
 
