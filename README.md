@@ -27,8 +27,8 @@ cd haruka-tunnel
 cp env.example .env
 ## ssh password-less generate
 ssh-keygen -t rsa
+cat ~/.ssh/id_rsa.pub | ssh bunker.example.com -p22000 "cat >> ~/.ssh/authorized_keys"
 ```
-> copy content ~/.ssh/id_rsa.pub to remote@server.com:~/.ssh/authorized_keys
 ###  command guide
 setting port, client ip and ssh address in list.tunnel file
 
