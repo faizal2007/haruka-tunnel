@@ -41,4 +41,4 @@ setting port, client ip and ssh address in list.tunnel file
 ./tunnel.sh stop
 ```
 
-Now you can access home private server using public ip server base on port configure in list.tunnel
+Now you can access home private server using public ip server base on port configured
