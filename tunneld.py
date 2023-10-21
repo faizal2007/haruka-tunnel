@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import subprocess, os, sys
+import subprocess, os, sys, datetime
 
 def is_process_running(pid):
     # Check if a process with the specified PID is running
@@ -17,10 +17,15 @@ def sanitize_filename(filename):
 def start_tunnel(tunnel_command):
     tunnel_name = os.path.basename(tunnel_command[2])
     sanitized_tunnel_name = sanitize_filename(tunnel_name)
+    # Get the current date and time
+    current_datetime = datetime.datetime.now()
+    # Format and print the current date and time
+    now = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
 
     # Start the tunnel in the background
     process = subprocess.Popen(tunnel_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, close_fds=True)
-    print(f"Tunnel started. {sanitized_tunnel_name}")
+    # Change the name of the subprocess
+    print(f"{now} : Tunnel started. {sanitized_tunnel_name}")
 
 def main():
     python_bin = sys.executable

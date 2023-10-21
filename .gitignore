@@ -5,3 +5,4 @@ command
 *.backup
 .env
 *.pid
+test.py

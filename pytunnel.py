@@ -41,6 +41,7 @@ def handler(chan, host, port):
 
 def reverse_forward_tunnel(server_port, remote_host, remote_port, transport):
     transport.request_port_forward("", server_port)
+    transport.set_keepalive(600)
     while True:
         chan = transport.accept(1000)
         if chan is None:
