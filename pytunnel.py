@@ -62,6 +62,7 @@ def main():
     ssh_host = os.getenv("SSH_HOST")
     ssh_port = os.getenv("SSH_PORT")
     ssh_user = os.getenv("SSH_USER")
+    haruka_home = os.getenv("HARUKA_HOME")
     debug = os.getenv("DEBUG")
 
     # ssh_pass = ''
@@ -86,7 +87,7 @@ def main():
 
     try:
 
-        if debug: paramiko.util.log_to_file("logs/paramiko.log")
+        if debug: paramiko.util.log_to_file(f"{haruka_home}/logs/paramiko.log")
         client.connect(
             ssh_host,
             ssh_port,

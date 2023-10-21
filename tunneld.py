@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 
 import subprocess, os, sys, datetime, re
+from dotenv import load_dotenv
+
+# Load the environment variables from the .env file
+load_dotenv()
 
 def is_process_running(pid):
     # Check if a process with the specified PID is running
@@ -30,22 +34,21 @@ def start_tunnel(tunnel_command):
 def main():
     python_bin = sys.executable
     current_path = os.getcwd()
+    haruka_home = os.getenv("HARUKA_HOME")
     script_name = "pytunnel.py"
     # Define a regular expression pattern to match two segments separated by ":"
     pattern = re.compile(r'^\d+:\d+$')
 
     # Check if list_port.conf exists
-    if not os.path.exists(f'{current_path}/list_port.conf'):
+    if not os.path.exists(f'{haruka_home}/list_port.conf'):
         # If the file doesn't exist, create it with default content
-        with open(f'{current_path}/list_port.conf', 'w') as file:
+        with open(f'{haruka_home}/list_port.conf', 'w') as file:
             file.write('8443:443\n22023:22\n8080:80\n')  # Add default content
-
-    full_path_script = os.path.join(current_path, script_name)
-
+    full_path_script = os.path.join(haruka_home, script_name)
     # Read and validate the list_port.conf file
     valid_ports = []
 
-    with open('list_port.conf', 'r') as file:
+    with open(f'{haruka_home}/list_port.conf', 'r') as file:
         for line in file:
             line = line.strip()  # Remove leading/trailing whitespace
             if pattern.match(line):
