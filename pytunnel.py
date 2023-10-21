@@ -70,7 +70,6 @@ def main():
 
     remote_bind_port = 8443  # port on server to forward
     forward_host = os.getenv("FORWARD_HOST")  # dest host to forward to
-    forward_port = 443  # dest port to forward to
 
     parser = argparse.ArgumentParser(description="SSH Tunnel Manager")
     parser.add_argument("ports", help="The tunnel configuration (e.g., 8443:443)")
