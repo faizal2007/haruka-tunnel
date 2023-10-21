@@ -6,3 +6,4 @@ command
 .env
 *.pid
 test.py
+list_port.conf
