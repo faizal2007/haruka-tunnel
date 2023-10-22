@@ -17,7 +17,9 @@ if [ -f .env ]; then
         fi
     elif [ "$1" == "stop" ]; then
         ps -ef | grep "tunnel" | grep -v "grep" | grep -v "./tunnel.sh stop" | awk '{print "Killing process", $2, "(", $10, ")"; system("kill -9 " $2)}'
+    elif [ "$1" == "status" ]; then
+        ps -ef | grep "tunnel" | grep -v "grep" | grep -v "./tunnel.sh status" | awk '{print "Tunnel process", $2, "(", $10, ")"}'
     else
-        echo "Usage: $0 [start|stop]"
+        echo "Usage: $0 [start|stop|status]"
     fi
 fi

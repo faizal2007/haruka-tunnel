@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import subprocess, os, sys, datetime, re
+import subprocess, os, sys, datetime, re, psutil
 from dotenv import load_dotenv
 
 # Load the environment variables from the .env file
@@ -13,6 +13,13 @@ def is_process_running(pid):
         return True
     except OSError:
         return False
+
+def find_pid_by_command_line(target_cmdline):
+    for process in psutil.process_iter(attrs=['pid', 'cmdline']):
+        process_info = process.info
+        if process_info['cmdline'] and re.match(target_cmdline, ' '.join(process_info['cmdline'])):
+            return process_info['pid']
+    return None
 
 def sanitize_filename(filename):
     # Replace characters that are not allowed in filenames
@@ -60,7 +67,13 @@ def main():
     tunnels = [{"command": [python_bin, full_path_script, port]} for port in valid_ports]
 
     for tunnel in tunnels:
-        start_tunnel(tunnel["command"])
+        target_cmdline = r".*/%s %s$" % (script_name, tunnel["command"][2])
+        pid = find_pid_by_command_line(target_cmdline)
+
+        if pid is None:
+            start_tunnel(tunnel["command"])
+        else:
+            print(f'Tunnel process {pid} ( {tunnel["command"][2]} )')
 
 if __name__ == "__main__":
     main()
