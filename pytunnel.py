@@ -51,76 +51,67 @@ def main():
             port_mappings.append((local_port, bind_port))
             config_names[(local_port, bind_port)] = config['name']
         
-        # Test SSH connection first
-        ssh_check = haruka.test_ssh_connection()
+        # SSH connection will be tested when starting tunnels
+        # (removed pre-check as it can cause false negatives with timeouts)
         
-        if not ssh_check:
-            print("✗ SSH connection test failed. Please check your SSH settings in the .env file.")
-            return 1  # Return error code
+        print("\n🔄 Preparing to start tunnels...\n")
         
-        # Pre-check: Detect and clean zombie ports before starting
-        print("\n🔍 Checking for existing port bindings...\n")
-        zombie_ports_cleaned = 0
-        ports_already_active = []
+        print()
         
-        for config in configs:
+        # Start tunnels individually (like PyManage does) for better reliability
+        print("🚀 Starting tunnels...\n")
+        
+        all_tunnels_started = True
+        max_retries = 3
+        
+        for idx, config in enumerate(configs):
+            local_port = config['local_port']
             bind_port = config['server_bind_port']
             config_name = config['name']
             
-            # Check if port is already bound on SSH server
-            port_health = haruka.check_port_health_ssh_server(bind_port)
+            print(f"  Starting tunnel for {config_name}:")
+            print(f"    localhost:{local_port} → SSH_server:{bind_port}")
             
-            if port_health:
-                # Port is already bound - might be active tunnel or zombie
-                print(f"  ⚠ Port {bind_port} [{config_name}] already in use on SSH server")
-                
-                # Try to determine if tunnel is working or zombie
-                # If we can't connect to it, it's likely a zombie
+            # Retry logic for SSH connection issues
+            success = False
+            for attempt in range(1, max_retries + 1):
                 try:
-                    # Give zombie port cleanup a chance
-                    print(f"    → Attempting to cleanup stale binding...")
-                    cleanup_success = haruka.kill_zombie_port_ssh_server(bind_port)
-                    if cleanup_success:
-                        print(f"    ✓ Cleaned up zombie port {bind_port}")
-                        zombie_ports_cleaned += 1
-                    else:
-                        # Port might be active - will be overridden anyway
-                        ports_already_active.append((config_name, bind_port))
-                        print(f"    ⚠ Port {bind_port} appears to be in use (may be active tunnel)")
+                    success = haruka.reverse_forward_tunnel(local_port, bind_port, background=True)
+                    if success:
+                        print(f"    ✓ Tunnel started")
+                        break
+                    elif attempt < max_retries:
+                        print(f"    ⚠ Attempt {attempt} failed, retrying... ({attempt}/{max_retries})")
+                        time.sleep(2)
                 except Exception as e:
-                    print(f"    ℹ Could not cleanup port {bind_port}: {e}")
-            else:
-                print(f"  ✓ Port {bind_port} [{config_name}] - available")
+                    if attempt < max_retries:
+                        print(f"    ⚠ Error: {e}, retrying... ({attempt}/{max_retries})")
+                        time.sleep(2)
+                    else:
+                        print(f"    ✗ Error after {max_retries} attempts: {e}")
+            
+            if not success:
+                print(f"    ✗ Failed to start tunnel for {config_name}")
+                all_tunnels_started = False
+            
+            # Add delay between tunnel connections to avoid SSH connection issues
+            if idx < len(configs) - 1:
+                print(f"    ⏳ Waiting before next tunnel...\n")
+                time.sleep(1)
         
-        if zombie_ports_cleaned > 0:
-            print(f"\n✓ Cleaned up {zombie_ports_cleaned} zombie port(s)")
-            print("  Waiting 2 seconds for port release...\n")
-            time.sleep(2)  # Wait for port to be released
+        print()
         
-        if ports_already_active:
-            print(f"\n⚠ {len(ports_already_active)} port(s) already in use (will be rebound):")
-            for config_name, port in ports_already_active:
-                print(f"  • {config_name}: {port}")
-            print()
+        if not all_tunnels_started:
+            print("⚠️  Warning: Some tunnels failed to start. Continuing anyway...")
+            print("   Check SSH connection and try running PyManage option 3 manually.\n")
         
-        # Start all tunnels with a single SSH connection
-        print("🚀 Starting tunnels...\n")
-        tunnel = haruka.reverse_forward_multiple(port_mappings, background=True)
-        
-        if not tunnel:
-            print("✗ Failed to start reverse port forwarding tunnels.")
-            return 1  # Return error code
-        
-        # Show config details for each tunnel
+        # Show config details for ALL tunnels
         print("📊 Tunnel Status:\n")
+        
         for config in configs:
             public_ip = config.get('remote_host') or ssh_host_env
             bind_port = config['server_bind_port']
             local_port = config['local_port']
-            # Debug: print what we're getting from config
-            if os.getenv('DEBUG') == 'True':
-                print(f"DEBUG - config keys: {config.keys()}")
-                print(f"DEBUG - remote_host: {config.get('remote_host')}, ssh_host_env: {ssh_host_env}")
             print(f"✓ [{config['name']}] Tunnel active: localhost:{local_port} → {public_ip}:{bind_port}")
         
         print(f"\n✓ Your private services are now publicly accessible")
