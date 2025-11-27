@@ -533,22 +533,22 @@ class PyManage:
             print("\n✗ SSH connection test failed!")
     
     def setup_systemd_service(self):
-        """Create systemd service file for pytunnel.py."""
+        """Create systemd service file for pytunnel.py with auto-detected Python."""
         print("\n" + "="*60)
         print("SETUP SYSTEMD SERVICE")
         print("="*60)
         
         # Get project path
         haruka_home = os.getenv('HARUKA_HOME', os.getcwd())
-        python_bin = os.getenv('PYTHON_BIN', 'python3')
         username = os.getenv('USER', 'root')
         
         print(f"\n📋 Systemd Service Configuration:")
         print(f"  Project Path: {haruka_home}")
-        print(f"  Python Binary: {python_bin}")
+        print(f"  Startup Script: {haruka_home}/tunnel.sh")
         print(f"  User: {username}")
         
-        # Create systemd service content
+        # Create systemd service content that uses tunnel.sh wrapper
+        # tunnel.sh auto-detects Python location from .env or venv
         service_content = f"""[Unit]
 Description=Haruka Tunnel - Reverse Port Forwarding Service
 After=network.target
@@ -558,12 +558,12 @@ Wants=network-online.target
 Type=simple
 User={username}
 WorkingDirectory={haruka_home}
-ExecStart={python_bin} {haruka_home}/pytunnel.py
+ExecStart={haruka_home}/tunnel.sh
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=pytunnel
+SyslogIdentifier=haruka-tunnel
 
 [Install]
 WantedBy=multi-user.target
@@ -572,6 +572,8 @@ WantedBy=multi-user.target
         service_file = '/etc/systemd/system/haruka-tunnel.service'
         
         print(f"\n📝 Service File Content:")
+        print(f"ℹ️  This service uses tunnel.sh which auto-detects Python location")
+        print(f"   from PYTHON_BIN in .env or defaults to venv/bin/python")
         print("-" * 60)
         print(service_content)
         print("-" * 60)
@@ -587,7 +589,7 @@ WantedBy=multi-user.target
                     print(f"  sudo tee {service_file} > /dev/null << 'EOF'")
                     print(service_content)
                     print("EOF")
-                    print(f"\nThen enable the service:")
+                    print(f"\nThen enable and start the service:")
                     print(f"  sudo systemctl daemon-reload")
                     print(f"  sudo systemctl enable haruka-tunnel.service")
                     print(f"  sudo systemctl start haruka-tunnel.service")
@@ -607,6 +609,11 @@ WantedBy=multi-user.target
                 print("  • View logs: sudo journalctl -u haruka-tunnel.service -f")
                 print("  • Stop service: sudo systemctl stop haruka-tunnel.service")
                 print("  • Restart service: sudo systemctl restart haruka-tunnel.service")
+                print("\n💡 Features:")
+                print("  • Auto-detects Python location from .env or venv")
+                print("  • Retries on failure (restart after 10 seconds)")
+                print("  • Runs all configured tunnels automatically")
+                print("  • Logs to systemd journal")
                 
             except Exception as e:
                 print(f"\n✗ Failed to create service file: {e}")

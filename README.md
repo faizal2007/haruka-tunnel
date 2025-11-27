@@ -368,7 +368,7 @@ Shutting down...
 
 ### Systemd Service Management
 
-Automatically start port forwarding tunnels on system boot:
+Automatically start port forwarding tunnels on system boot with auto-detected Python environment:
 
 **Setup Service:**
 
@@ -384,8 +384,11 @@ Automatically start port forwarding tunnels on system boot:
 ```bash
 📋 Systemd Service Configuration:
   Project Path: /storage/linux/Projects/haruka-tunnel
-  Python Binary: venv/bin/python
+  Startup Script: /storage/linux/Projects/haruka-tunnel/tunnel.sh
   User: root
+
+ℹ️  This service uses tunnel.sh which auto-detects Python location
+   from PYTHON_BIN in .env or defaults to venv/bin/python
 
 Create systemd service at /etc/systemd/system/haruka-tunnel.service? (yes/no): yes
 
@@ -396,6 +399,14 @@ Create systemd service at /etc/systemd/system/haruka-tunnel.service? (yes/no): y
   2. Enable service: sudo systemctl enable haruka-tunnel.service
   3. Start service: sudo systemctl start haruka-tunnel.service
 ```
+
+**Key Features:**
+
+- ✅ **Auto-Detects Python** - Uses PYTHON_BIN from .env or defaults to venv/bin/python
+- ✅ **Works with/without venv** - Automatically finds correct Python interpreter
+- ✅ **Auto-Restart** - Restarts on failure with 10-second delay
+- ✅ **Journal Logging** - All output captured in systemd journal
+- ✅ **Graceful Shutdown** - Handles SIGINT signals properly
 
 **Service Commands:**
 
@@ -418,21 +429,40 @@ sudo systemctl disable haruka-tunnel.service
 
 **Service File Details:**
 
-The systemd service file is created at `/etc/systemd/system/haruka-tunnel.service` with:
+The systemd service file is created at `/etc/systemd/system/haruka-tunnel.service` and uses `tunnel.sh` as the entry point:
 
-- **AutoStart** - Service starts automatically on system boot (enabled)
-- **AutoRestart** - Service restarts automatically if it fails (10 second delay)
-- **Logging** - All output captured in systemd journal (journalctl)
-- **User** - Runs as the configured system user
-- **WorkingDirectory** - Runs from project directory
-- **Exit Codes** - Properly handled for restart policies:
-  - `0`: Graceful shutdown
-  - `1`: Configuration/SSH/tunnel errors (restarts)
-  - `2`: Unexpected exceptions (restarts)
+```ini
+[Unit]
+Description=Haruka Tunnel - Reverse Port Forwarding Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/storage/linux/Projects/haruka-tunnel
+ExecStart=/storage/linux/Projects/haruka-tunnel/tunnel.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=haruka-tunnel
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**How Auto-Detection Works:**
+
+1. **tunnel.sh** script checks for `PYTHON_BIN` in `.env` file
+2. If found, uses that Python interpreter
+3. If not found, defaults to `venv/bin/python`
+4. Validates Python binary exists before starting tunnels
+5. Provides clear error if Python is not found
 
 **Systemd Compatibility:**
 
-PyTunnel is fully compatible with systemd services:
+PyTunnel with tunnel.sh is fully compatible with systemd services:
 
 - ✅ Proper signal handling (SIGINT)
 - ✅ Exit codes for restart policies
@@ -440,14 +470,7 @@ PyTunnel is fully compatible with systemd services:
 - ✅ Journal-compatible output format
 - ✅ Works with Type=simple services
 - ✅ Supports on-failure restart policies
-
-Import and use the Haruka class directly in Python:
-
-```python
-from __init__ import Haruka
-
-haruka = Haruka()
-```
+- ✅ Auto-detects Python regardless of installation method
 
 ### Reverse Port Forwarding (Expose Private Service)
 
