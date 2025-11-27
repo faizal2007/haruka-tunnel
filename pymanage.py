@@ -54,6 +54,7 @@ class PyManage:
         print("  [6] Check port health")
         print("  [7] Kill zombie port")
         print("  [8] Test SSH connection")
+        print("  [9] Setup systemd service")
         print("  [0] Exit")
         print("\n" + "-"*60)
     
@@ -531,6 +532,87 @@ class PyManage:
         else:
             print("\n✗ SSH connection test failed!")
     
+    def setup_systemd_service(self):
+        """Create systemd service file for pytunnel.py."""
+        print("\n" + "="*60)
+        print("SETUP SYSTEMD SERVICE")
+        print("="*60)
+        
+        # Get project path
+        haruka_home = os.getenv('HARUKA_HOME', os.getcwd())
+        python_bin = os.getenv('PYTHON_BIN', 'python3')
+        username = os.getenv('USER', 'root')
+        
+        print(f"\n📋 Systemd Service Configuration:")
+        print(f"  Project Path: {haruka_home}")
+        print(f"  Python Binary: {python_bin}")
+        print(f"  User: {username}")
+        
+        # Create systemd service content
+        service_content = f"""[Unit]
+Description=Haruka Tunnel - Reverse Port Forwarding Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={username}
+WorkingDirectory={haruka_home}
+ExecStart={python_bin} {haruka_home}/pytunnel.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pytunnel
+
+[Install]
+WantedBy=multi-user.target
+"""
+        
+        service_file = '/etc/systemd/system/haruka-tunnel.service'
+        
+        print(f"\n📝 Service File Content:")
+        print("-" * 60)
+        print(service_content)
+        print("-" * 60)
+        
+        confirm = input(f"\nCreate systemd service at {service_file}? (yes/no): ").strip().lower()
+        
+        if confirm in ['yes', 'y']:
+            try:
+                # Check if running as root
+                if os.geteuid() != 0:
+                    print("\n⚠ This command requires sudo privileges")
+                    print(f"\nRun this command with sudo:")
+                    print(f"  sudo tee {service_file} > /dev/null << 'EOF'")
+                    print(service_content)
+                    print("EOF")
+                    print(f"\nThen enable the service:")
+                    print(f"  sudo systemctl daemon-reload")
+                    print(f"  sudo systemctl enable haruka-tunnel.service")
+                    print(f"  sudo systemctl start haruka-tunnel.service")
+                    return
+                
+                # Write service file
+                with open(service_file, 'w') as f:
+                    f.write(service_content)
+                
+                print(f"\n✓ Service file created at {service_file}")
+                print("\n📋 Next steps:")
+                print("  1. Reload systemd: sudo systemctl daemon-reload")
+                print("  2. Enable service: sudo systemctl enable haruka-tunnel.service")
+                print("  3. Start service: sudo systemctl start haruka-tunnel.service")
+                print("\n📊 Useful commands:")
+                print("  • Check status: sudo systemctl status haruka-tunnel.service")
+                print("  • View logs: sudo journalctl -u haruka-tunnel.service -f")
+                print("  • Stop service: sudo systemctl stop haruka-tunnel.service")
+                print("  • Restart service: sudo systemctl restart haruka-tunnel.service")
+                
+            except Exception as e:
+                print(f"\n✗ Failed to create service file: {e}")
+        else:
+            print("\n⚠ Service creation cancelled")
+    
     def run(self):
         """Main loop for the PyManage interface."""
         print("\n╔" + "="*58 + "╗")
@@ -542,7 +624,7 @@ class PyManage:
         while self.running:
             self.display_header()
             
-            choice = input("Enter option (0-8): ").strip()
+            choice = input("Enter option (0-9): ").strip()
             
             if choice == '1':
                 self.create_port_config()
@@ -560,6 +642,8 @@ class PyManage:
                 self.kill_zombie_port()
             elif choice == '8':
                 self.test_ssh_connection()
+            elif choice == '9':
+                self.setup_systemd_service()
             elif choice == '0':
                 print("\n👋 Thank you for using PyManage. Goodbye!\n")
                 self.running = False

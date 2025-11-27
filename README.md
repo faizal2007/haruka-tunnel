@@ -78,6 +78,7 @@ Manage port configurations with an interactive menu:
 | `[6]` | **Check port health** - Detect zombie port bindings on SSH server |
 | `[7]` | **Kill zombie port** - Force cleanup stale port bindings |
 | `[8]` | **Test SSH connection** - Verify SSH connectivity |
+| `[9]` | **Setup systemd service** - Create systemd service to auto-start tunnels on boot |
 | `[0]` | **Exit** - Exit the program |
 
 **Configuration Fields:**
@@ -123,6 +124,78 @@ Description: Flask web application
 - Type `cancel` at any prompt to return to main menu without completing the config
 - After creating a config, choose `[1]` to create another or `[0]` to return to menu
 
+**Detailed Menu Operations:**
+
+**[1] Create Port Configuration**
+
+- Enter configuration name (e.g., `web_server`, `flask_app`)
+- Enter local port (where your service runs)
+- Enter bind port (public port on SSH server)
+- Enter public IP (defaults to SSH_HOST from .env)
+- Optional: Add description/notes
+- Supports unlimited configs in a single session
+- Type `cancel` at any point to abort
+
+**[2] List All Configurations**
+
+- Displays all saved configurations in table format
+- Shows: ID, Name, Local Port, Bind Port, Public IP, Description
+- Useful for managing multiple port forwarding rules
+
+**[3] Start Tunnel**
+
+- Select a configuration from list
+- Shows port mappings before starting
+- Checks port health before tunnel creation
+- Option to cleanup zombie ports if detected
+- Choose foreground or background execution
+- Displays tunnel status when active
+
+**[4] Update Configuration**
+
+- Select configuration to modify
+- Edit individual fields: name, local port, bind port, public IP, description
+- Changes are saved to database immediately
+- Useful for adjusting port mappings without recreating
+
+**[5] Delete Configuration**
+
+- Select configuration to remove
+- Requires confirmation before deletion
+- Safely removes from database
+
+**[6] Check Port Health**
+
+- Test if port is available on SSH server
+- Detects zombie/stale port bindings
+- Shows port status: available, in-use, or zombie
+
+**[7] Kill Zombie Port**
+
+- Force cleanup stale port bindings
+- Removes abandoned tunnels holding ports
+- Useful when tunnels crash unexpectedly
+
+**[8] Test SSH Connection**
+
+- Verifies SSH connectivity to server
+- Tests authentication with configured credentials
+- Confirms SSH_HOST, SSH_PORT, SSH_USER settings
+
+**[9] Setup Systemd Service**
+
+- Auto-generates systemd service file
+- Configures auto-start on system boot
+- Sets up auto-restart on failure
+- Guides through installation steps
+
+#### Auto-Initialize Database
+
+- PyManage automatically creates `port_forwarding.db` on first run
+- Uses DuckDB for local storage
+- No external database server needed
+- All configs stored locally for portability
+
 ### PyTunnel - Automated Port Forwarding
 
 Start all configured tunnels automatically from the database:
@@ -134,6 +207,8 @@ Start all configured tunnels automatically from the database:
 **Features:**
 
 - Reads all port configurations from DuckDB database
+- **Pre-checks for existing port bindings** before startup
+- **Automatically detects and cleans zombie ports** to prevent conflicts
 - Displays all tunnels with their mappings before starting
 - Tests SSH connection to ensure connectivity
 - Establishes **single SSH connection** for all tunnels (efficient)
@@ -145,10 +220,14 @@ Start all configured tunnels automatically from the database:
 
 1. Loads all configurations from `port_forwarding.db`
 2. Tests SSH connection using `.env` credentials
-3. Connects to SSH server once
-4. Requests port bindings for all configured ports
-5. Keeps connection alive and listens for incoming connections
-6. Forwards incoming connections to local services
+3. **Pre-checks all configured ports on SSH server:**
+   - If port is already bound (zombie), attempts cleanup
+   - If port is available, continues normally
+   - Reports status for each port
+4. Connects to SSH server once
+5. Requests port bindings for all configured ports
+6. Keeps connection alive and listens for incoming connections
+7. Forwards incoming connections to local services
 
 **Configuration Support:**
 
@@ -167,10 +246,19 @@ Each tunnel is configured with:
   • web_server: 5000 → bunker.geekdo.me:5000
   • ssh_access: 22 → 107.175.2.25:22025
 
-Connecting to SSH server root@bunker.geekdo.me:22022...
-Setting up 2 reverse port forwarding tunnels:
-  1. localhost:5000 -> bunker.geekdo.me:5000
-  2. localhost:22 -> 107.175.2.25:22025
+🔍 Checking for existing port bindings...
+
+  ✓ Port 5000 [web_server] - available
+  ⚠ Port 22025 [ssh_access] already in use on SSH server
+    → Attempting to cleanup stale binding...
+    ✓ Cleaned up zombie port 22025
+
+✓ Cleaned up 1 zombie port(s)
+  Waiting 2 seconds for port release...
+
+🚀 Starting tunnels...
+
+📊 Tunnel Status:
 
 ✓ [web_server] Tunnel active: localhost:5000 → bunker.geekdo.me:5000
 ✓ [ssh_access] Tunnel active: localhost:22 → 107.175.2.25:22025
@@ -188,7 +276,9 @@ Setting up 2 reverse port forwarding tunnels:
 
 # 2. Start all tunnels with PyTunnel
 ./pytunnel.py
-# Automatically starts all configured tunnels
+# Automatically checks for zombie ports
+# Cleans up any stale bindings
+# Starts all configured tunnels
 # Keep running (Ctrl+C to stop)
 
 # 3. Access your services publicly
@@ -204,7 +294,80 @@ Press `Ctrl+C` to gracefully stop all tunnels:
 Shutting down...
 ```
 
-### Haruka Class (Programmatic)
+### Systemd Service Management
+
+Automatically start port forwarding tunnels on system boot:
+
+**Setup Service:**
+
+1. Use PyManage to create systemd service:
+
+```bash
+./pymanage.py
+# [9] Setup systemd service
+```
+
+1. Follow the prompts (may require sudo):
+
+```bash
+📋 Systemd Service Configuration:
+  Project Path: /storage/linux/Projects/haruka-tunnel
+  Python Binary: venv/bin/python
+  User: root
+
+Create systemd service at /etc/systemd/system/haruka-tunnel.service? (yes/no): yes
+
+✓ Service file created at /etc/systemd/system/haruka-tunnel.service
+
+📋 Next steps:
+  1. Reload systemd: sudo systemctl daemon-reload
+  2. Enable service: sudo systemctl enable haruka-tunnel.service
+  3. Start service: sudo systemctl start haruka-tunnel.service
+```
+
+**Service Commands:**
+
+```bash
+# Check service status
+sudo systemctl status haruka-tunnel.service
+
+# View service logs in real-time
+sudo journalctl -u haruka-tunnel.service -f
+
+# Start/stop/restart service
+sudo systemctl start haruka-tunnel.service
+sudo systemctl stop haruka-tunnel.service
+sudo systemctl restart haruka-tunnel.service
+
+# Enable/disable on boot
+sudo systemctl enable haruka-tunnel.service
+sudo systemctl disable haruka-tunnel.service
+```
+
+**Service File Details:**
+
+The systemd service file is created at `/etc/systemd/system/haruka-tunnel.service` with:
+
+- **AutoStart** - Service starts automatically on system boot (enabled)
+- **AutoRestart** - Service restarts automatically if it fails (10 second delay)
+- **Logging** - All output captured in systemd journal (journalctl)
+- **User** - Runs as the configured system user
+- **WorkingDirectory** - Runs from project directory
+- **Exit Codes** - Properly handled for restart policies:
+  - `0`: Graceful shutdown
+  - `1`: Configuration/SSH/tunnel errors (restarts)
+  - `2`: Unexpected exceptions (restarts)
+
+**Systemd Compatibility:**
+
+PyTunnel is fully compatible with systemd services:
+
+- ✅ Proper signal handling (SIGINT)
+- ✅ Exit codes for restart policies
+- ✅ Exception handling and error logging
+- ✅ Journal-compatible output format
+- ✅ Works with Type=simple services
+- ✅ Supports on-failure restart policies
 
 Import and use the Haruka class directly in Python:
 
