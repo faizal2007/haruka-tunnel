@@ -58,6 +58,78 @@ systemctl restart sshd
 
 ## Usage
 
+### Quick Start - Using tunnel.sh (Recommended)
+
+The fastest way to start all configured tunnels:
+
+```bash
+./tunnel.sh
+```
+
+This automatically activates the virtual environment and starts all tunnels configured in the database. No need to manually activate venv!
+
+**Features:**
+
+- ✅ Auto-activates Python venv
+- ✅ Retries failed connections up to 3 times
+- ✅ Starts all configured tunnels with delays between connections
+- ✅ Graceful error handling with clear messages
+- ✅ Works with systemd services
+
+### Automated Tunnel Startup - pytunnel.py
+
+Run all configured tunnels automatically:
+
+```bash
+# Option 1: Using tunnel.sh wrapper (RECOMMENDED)
+./tunnel.sh
+
+# Option 2: Manual venv activation
+source venv/bin/activate
+python pytunnel.py
+
+# Option 3: Direct execution (requires venv in PATH)
+venv/bin/python pytunnel.py
+```
+
+**What happens:**
+
+1. Reads all port configurations from database
+2. Attempts to establish SSH connection to tunnel server
+3. Creates reverse tunnels for each configured port
+4. Starts all tunnels in background threads
+5. Retries failed connections automatically (up to 3 attempts)
+6. Stays running to maintain SSH connections (Ctrl+C to stop)
+
+**Example Output:**
+
+```bash
+📋 Found 2 port configuration(s) to forward:
+
+  • flask http: 5000 → bunker.geekdo.me:8000
+  • ssh server: 22 → 107.175.2.25:22025
+
+🔄 Preparing to start tunnels...
+
+🚀 Starting tunnels...
+
+  Starting tunnel for flask http:
+    localhost:5000 → SSH_server:8000
+    ✓ Tunnel started
+    ⏳ Waiting before next tunnel...
+
+  Starting tunnel for ssh server:
+    localhost:22 → SSH_server:22025
+    ✓ Tunnel started
+
+📊 Tunnel Status:
+
+✓ [flask http] Tunnel active: localhost:5000 → bunker.geekdo.me:8000
+✓ [ssh server] Tunnel active: localhost:22 → 107.175.2.25:22025
+
+✓ Your private services are now publicly accessible
+```
+
 ### PyManage - Interactive CLI Tool
 
 Manage port configurations with an interactive menu:
@@ -540,11 +612,11 @@ Remote Service (internal-service.local:80)
 
 ## Technologies
 
-- Python 3.14 - Latest Python version
+- Python 3.10+ - Latest Python version
 - Paramiko 4.0.0 - SSH protocol implementation
-- Cryptography 46.0.3 - Encryption utilities
-- DuckDB - Embedded SQL database
-- python-dotenv 1.0.0 - Environment configuration
+- DuckDB 1.4.2 - Embedded SQL database for configuration storage
+- python-dotenv 1.0.0 - Environment configuration management
+- Bash - Shell wrapper for venv activation
 
 ## Database Schema
 
@@ -600,6 +672,26 @@ haruka.reverse_forward_tunnel(22, 22025, background=True)
 
 ## Troubleshooting
 
+### White Page or Connection Issues
+
+**Problem:** Page shows blank when accessing the public URL
+
+**Solution:**
+
+- Run `./tunnel.sh` instead of manually starting tunnels
+- The wrapper script handles venv activation and SSH connection retries
+- Check that Flask/your service is running locally: `curl localhost:5000`
+
+### Connection Timeouts with pytunnel.py
+
+**Problem:** `Failed to setup reverse port forwarding: timed out`
+
+**Solution:**
+
+- Use `./tunnel.sh` which includes automatic retries
+- Or run: `source venv/bin/activate && python pytunnel.py`
+- The standalone `python pytunnel.py` won't work without venv activation
+
 ### Connection Refused
 
 - Check `.env` configuration
@@ -624,6 +716,7 @@ haruka-tunnel/
 ├── __init__.py                 # Haruka class implementation
 ├── pymanage.py                 # Interactive CLI port manager
 ├── pytunnel.py                 # Automated tunnel startup from DB configs
+├── tunnel.sh                   # 🆕 Wrapper script (recommended entry point)
 ├── haruka_test.py              # Original HarukaTest class (backup)
 ├── examples/                    # Example scripts
 │   ├── reverse_forward_example.py
